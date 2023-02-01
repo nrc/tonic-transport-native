@@ -4,7 +4,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_native_tls::TlsStream;
 
-use crate::{Certificate, Result};
+use crate::{tls::Certificate, Result};
 use std::sync::Arc;
 
 /// Trait that connected IO resources implement and use to produce info about the connection.

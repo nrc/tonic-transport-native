@@ -1,19 +1,18 @@
 #[doc(inline)]
 pub use crate::channel::{Channel, Endpoint};
 #[doc(inline)]
-pub use crate::server::{NamedService, Server};
+pub use crate::server::{NamedService, Router, Server};
 #[doc(inline)]
 pub use crate::service::grpc_timeout::TimeoutExpired;
-pub use crate::tls::{Certificate, ClientTlsConfig, TlsAcceptor};
+pub use crate::tls::{ClientTlsConfig, TlsAcceptor};
 pub use hyper::{Body, Uri};
 
-use http_body::Body as _;
 use pin_project::pin_project;
 use std::error::Error as StdError;
 use tonic::body::BoxBody;
 
 mod channel;
-pub mod server;
+mod server;
 mod service;
 mod tls;
 
@@ -59,22 +58,9 @@ impl From<native_tls::Error> for Error {
 type Result<T> = std::result::Result<T, Error>;
 pub type BoxError = Box<dyn StdError + Send + Sync>;
 
-/// Convert a [`http_body::Body`] into a [`BoxBody`].
-pub(crate) fn boxed_body<B>(body: B) -> BoxBody
-where
-    B: http_body::Body<Data = bytes::Bytes> + Send + 'static,
-    B::Error: Into<BoxError>,
-{
-    body.map_err(|e| {
-        let err: BoxError = e.into();
-        tonic::Status::from_error(err)
-    })
-    .boxed_unsync()
-}
-
 /// A pin-project compatible `Option`
 #[pin_project(project = OptionPinProj)]
-pub(crate) enum OptionPin<T> {
+enum OptionPin<T> {
     Some(#[pin] T),
     None,
 }

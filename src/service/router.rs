@@ -87,8 +87,23 @@ impl Future for RoutesFuture {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match futures_util::ready!(self.project().0.poll(cx)) {
-            Ok(res) => Ok(res.map(crate::boxed_body)).into(),
+            Ok(res) => Ok(res.map(boxed_body)).into(),
             Err(err) => match err {},
         }
     }
+}
+
+/// Convert a [`http_body::Body`] into a [`BoxBody`].
+fn boxed_body<B>(body: B) -> BoxBody
+where
+    B: http_body::Body<Data = bytes::Bytes> + Send + 'static,
+    B::Error: Into<BoxError>,
+{
+    use http_body::Body as _;
+
+    body.map_err(|e| {
+        let err: BoxError = e.into();
+        tonic::Status::from_error(err)
+    })
+    .boxed_unsync()
 }
