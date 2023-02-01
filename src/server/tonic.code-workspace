@@ -11,6 +11,9 @@
 		},
 		{
 			"path": "../../../tonic"
+		},
+		{
+			"path": "../../../rust-native-tls"
 		}
 	],
 	"settings": {}
