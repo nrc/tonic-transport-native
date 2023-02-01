@@ -96,14 +96,6 @@ impl Connected for TcpStream {
     }
 }
 
-impl Connected for tokio::io::DuplexStream {
-    type ConnectInfo = ();
-
-    fn connect_info(&self) -> Result<Self::ConnectInfo> {
-        Ok(())
-    }
-}
-
 impl<T> Connected for TlsStream<T>
 where
     T: Connected + AsyncRead + AsyncWrite + Unpin,

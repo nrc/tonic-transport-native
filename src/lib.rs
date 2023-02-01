@@ -1,7 +1,7 @@
 #[doc(inline)]
 pub use crate::channel::{Channel, ChannelBuilder};
 #[doc(inline)]
-pub use crate::server::{NamedService, Router, Server};
+pub use crate::server::{Router, Server};
 #[doc(inline)]
 pub use crate::service::grpc_timeout::TimeoutExpired;
 pub use hyper::{Body, Uri};

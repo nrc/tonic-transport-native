@@ -1,7 +1,6 @@
-pub use self::conn::{Connected, TcpConnectInfo};
+pub use self::conn::Connected;
 pub use self::incoming::TcpIncoming;
 pub use crate::service::Routes;
-pub use tonic::server::NamedService;
 
 use std::{
     convert::Infallible,
@@ -29,6 +28,7 @@ use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_native_tls::TlsStream;
 use tonic::body::BoxBody;
+use tonic::server::NamedService;
 use tower::{
     layer::util::{Identity, Stack},
     layer::Layer,
@@ -396,12 +396,12 @@ impl<L> Server<L> {
         }
     }
 
-    pub(crate) async fn serve_with_shutdown<S, I, F, IO, IE, ResBody>(
+    async fn serve_with_shutdown<S, I, F, IO, IE, ResBody>(
         self,
         svc: S,
         incoming: I,
         signal: Option<F>,
-    ) -> Result<(), super::Error>
+    ) -> Result<(), Error>
     where
         L: Layer<S>,
         L::Service: Service<Request<Body>, Response = Response<ResBody>> + Clone + Send + 'static,
@@ -513,7 +513,7 @@ impl<L> Router<L> {
     ///
     /// [`Server`]: struct.Server.html
     /// [tokio]: https://docs.rs/tokio
-    pub async fn serve<ResBody>(self, addr: SocketAddr) -> Result<(), super::Error>
+    pub async fn serve<ResBody>(self, addr: SocketAddr) -> Result<(), Error>
     where
         L: Layer<Routes>,
         L::Service: Service<Request<Body>, Response = Response<ResBody>> + Clone + Send + 'static,
@@ -523,7 +523,7 @@ impl<L> Router<L> {
         ResBody::Error: Into<BoxError>,
     {
         let incoming = TcpIncoming::new(addr, self.server.tcp_nodelay, self.server.tcp_keepalive)
-            .map_err(super::Error::from_source)?;
+            .map_err(Error::from_source)?;
         self.server
             .serve_with_shutdown::<_, _, future::Ready<()>, _, _, ResBody>(
                 self.routes,
@@ -543,7 +543,7 @@ impl<L> Router<L> {
         self,
         addr: SocketAddr,
         signal: F,
-    ) -> Result<(), super::Error>
+    ) -> Result<(), Error>
     where
         L: Layer<Routes>,
         L::Service: Service<Request<Body>, Response = Response<ResBody>> + Clone + Send + 'static,
@@ -553,7 +553,7 @@ impl<L> Router<L> {
         ResBody::Error: Into<BoxError>,
     {
         let incoming = TcpIncoming::new(addr, self.server.tcp_nodelay, self.server.tcp_keepalive)
-            .map_err(super::Error::from_source)?;
+            .map_err(Error::from_source)?;
         self.server
             .serve_with_shutdown(self.routes, incoming, Some(signal))
             .await
@@ -566,7 +566,7 @@ impl<L> Router<L> {
     pub async fn serve_with_incoming<I, IO, IE, ResBody>(
         self,
         incoming: I,
-    ) -> Result<(), super::Error>
+    ) -> Result<(), Error>
     where
         I: Stream<Item = Result<IO, IE>>,
         IO: AsyncRead + AsyncWrite + Connected + Unpin + Send + 'static,
@@ -598,7 +598,7 @@ impl<L> Router<L> {
         self,
         incoming: I,
         signal: F,
-    ) -> Result<(), super::Error>
+    ) -> Result<(), Error>
     where
         I: Stream<Item = Result<IO, IE>>,
         IO: AsyncRead + AsyncWrite + Connected + Unpin + Send + 'static,

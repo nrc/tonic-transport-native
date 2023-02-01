@@ -26,15 +26,12 @@ impl Connection for BoxedIo {
 }
 
 impl Connected for BoxedIo {
-    type ConnectInfo = NoneConnectInfo;
+    type ConnectInfo = ();
 
     fn connect_info(&self) -> Result<Self::ConnectInfo> {
-        Ok(NoneConnectInfo)
+        Ok(())
     }
 }
-
-#[derive(Copy, Clone)]
-pub(crate) struct NoneConnectInfo;
 
 impl AsyncRead for BoxedIo {
     fn poll_read(
