@@ -67,20 +67,18 @@ impl fmt::Debug for TlsConnector {
 }
 
 #[derive(Clone)]
-pub struct TlsAcceptor {
-    inner: Arc<tokio_native_tls::TlsAcceptor>,
-}
+pub(crate) struct TlsAcceptor(Arc<tokio_native_tls::TlsAcceptor>);
 
 impl TlsAcceptor {
-    pub fn new(acceptor: Arc<tokio_native_tls::TlsAcceptor>) -> Self {
-        Self { inner: acceptor }
+    pub(crate) fn new(acceptor: Arc<tokio_native_tls::TlsAcceptor>) -> Self {
+        Self(acceptor)
     }
 
     pub(crate) async fn accept<IO>(&self, io: IO) -> Result<TlsStream<IO>>
     where
         IO: AsyncRead + AsyncWrite + Connected + Unpin + Send + 'static,
     {
-        let acceptor = self.inner.clone();
+        let acceptor = self.0.clone();
         acceptor.accept(io).await.map_err(Into::into)
     }
 }

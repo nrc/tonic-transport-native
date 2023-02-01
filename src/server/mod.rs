@@ -87,12 +87,12 @@ pub struct Router<L = Identity> {
 
 impl Server {
     /// Create a new server builder that can configure a [`Server`].
-    pub fn builder(tls: TlsAcceptor) -> Self {
+    pub fn builder(tls: tokio_native_tls::TlsAcceptor) -> Self {
         Server {
             trace_interceptor: None,
             concurrency_limit: None,
             timeout: None,
-            tls,
+            tls: TlsAcceptor::new(Arc::new(tls)),
             init_stream_window_size: None,
             init_connection_window_size: None,
             max_concurrent_streams: None,

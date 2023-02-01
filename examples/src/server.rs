@@ -1,12 +1,10 @@
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use tokio_native_tls::native_tls::NativeAcceptorBuilder;
 use tonic::{Request, Response, Status};
-use tonic_transport::{Server, TlsAcceptor};
+use tonic_transport::Server;
 
 use crate::proto::hello_server::{Hello, HelloServer};
 use crate::proto::{HelloRequest, HelloResponse};
-
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,13 +15,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     builder.set_alpn_protos(b"\x02h2")?;
     builder.set_alpn_select_callback(|_, _| Ok(b"h2"));
 
-    let sync_accepter = NativeAcceptorBuilder::new(builder).build()?;
-    let tls = TlsAcceptor::new(Arc::new(sync_accepter.into()));
+    let tls = NativeAcceptorBuilder::new(builder).build()?;
 
     let addr = "[::1]:50051".parse()?;
     let greeter = MyGreeter::default();
 
-    Server::builder(tls)
+    Server::builder(tls.into())
         .add_service(HelloServer::new(greeter))
         .serve(addr)
         .await?;
