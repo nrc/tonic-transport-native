@@ -1,5 +1,5 @@
 #[doc(inline)]
-pub use crate::channel::{Channel, Endpoint};
+pub use crate::channel::{Channel, ChannelBuilder};
 #[doc(inline)]
 pub use crate::server::{NamedService, Router, Server};
 #[doc(inline)]

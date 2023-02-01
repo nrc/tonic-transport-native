@@ -2,7 +2,7 @@
 
 mod endpoint;
 
-pub use self::endpoint::Endpoint;
+pub use self::endpoint::ChannelBuilder;
 
 use crate::service::{Connection, DynamicServiceStream};
 use crate::{BoxBody, BoxError, Error, Result};
@@ -100,15 +100,15 @@ impl IntoUri for Bytes {
 
 impl Channel {
     /// Create an [`Endpoint`] builder that can create [`Channel`]s.
-    pub fn builder(uri: impl IntoUri, tls: TlsConnector) -> Result<Endpoint> {
-        Endpoint::new(uri, tls)
+    pub fn builder(uri: impl IntoUri, tls: TlsConnector) -> Result<ChannelBuilder> {
+        ChannelBuilder::new(uri, tls)
     }
 
     /// Balance a list of [`Endpoint`]'s.
     ///
     /// This creates a [`Channel`] that will load balance across all the
     /// provided endpoints.
-    pub fn balance_list(list: impl Iterator<Item = Endpoint>) -> Self {
+    pub fn balance_list(list: impl Iterator<Item = ChannelBuilder>) -> Self {
         let (channel, tx) = Self::balance_channel(DEFAULT_BUFFER_SIZE);
         list.for_each(|endpoint| {
             tx.try_send(Change::Insert(endpoint.uri.clone(), endpoint))
@@ -121,7 +121,7 @@ impl Channel {
     /// Balance a list of [`Endpoint`]'s.
     ///
     /// This creates a [`Channel`] that will listen to a stream of change events and will add or remove provided endpoints.
-    pub fn balance_channel<K>(capacity: usize) -> (Self, Sender<Change<K, Endpoint>>)
+    pub fn balance_channel<K>(capacity: usize) -> (Self, Sender<Change<K, ChannelBuilder>>)
     where
         K: Hash + Eq + Send + Clone + 'static,
     {
@@ -130,7 +130,7 @@ impl Channel {
         (Self::balance(list, DEFAULT_BUFFER_SIZE), tx)
     }
 
-    pub(crate) fn new<C>(connector: C, endpoint: Endpoint) -> Self
+    pub(crate) fn new<C>(connector: C, endpoint: ChannelBuilder) -> Self
     where
         C: Service<Uri> + Send + 'static,
         C::Error: Into<BoxError> + Send,
@@ -146,7 +146,7 @@ impl Channel {
         Channel { svc }
     }
 
-    pub(crate) async fn connect<C>(connector: C, endpoint: Endpoint) -> Result<Self>
+    pub(crate) async fn connect<C>(connector: C, endpoint: ChannelBuilder) -> Result<Self>
     where
         C: Service<Uri> + Send + 'static,
         C::Error: Into<BoxError> + Send,

@@ -10,7 +10,7 @@ use tower::make::MakeConnection;
 ///
 /// This struct is used to build and configure HTTP/2 channels.
 #[derive(Clone)]
-pub struct Endpoint {
+pub struct ChannelBuilder {
     pub(crate) uri: Uri,
     pub(crate) tls: TlsConnector,
     pub(crate) tls_verify_domain: Option<String>,
@@ -31,7 +31,7 @@ pub struct Endpoint {
     pub(crate) http2_adaptive_window: Option<bool>,
 }
 
-impl Endpoint {
+impl ChannelBuilder {
     pub fn new(uri: impl IntoUri, tls: TlsConnector) -> Result<Self> {
         Ok(Self {
             uri: uri.into_uri()?,
@@ -72,7 +72,7 @@ impl Endpoint {
     {
         user_agent
             .try_into()
-            .map(|ua| Endpoint {
+            .map(|ua| ChannelBuilder {
                 user_agent: Some(ua),
                 ..self
             })
@@ -92,7 +92,7 @@ impl Endpoint {
     /// // origin: "https://example.com"
     /// ```
     pub fn origin(self, origin: Uri) -> Self {
-        Endpoint {
+        ChannelBuilder {
             origin: Some(origin),
             ..self
         }
@@ -103,7 +103,7 @@ impl Endpoint {
     /// The domain name is used to verify the server's TLS certificate. If no domain is specified,
     /// then the domain from the channel's URI is used.
     pub fn tls_verify_domain(self, tls_verify_domain: String) -> Self {
-        Endpoint {
+        ChannelBuilder {
             tls_verify_domain: Some(tls_verify_domain),
             ..self
         }
@@ -126,7 +126,7 @@ impl Endpoint {
     ///
     /// [`Request::set_timeout`]: crate::Request::set_timeout
     pub fn timeout(self, dur: Duration) -> Self {
-        Endpoint {
+        ChannelBuilder {
             timeout: Some(dur),
             ..self
         }
@@ -143,7 +143,7 @@ impl Endpoint {
     /// builder.connect_timeout(Duration::from_secs(5));
     /// ```
     pub fn connect_timeout(self, dur: Duration) -> Self {
-        Endpoint {
+        ChannelBuilder {
             connect_timeout: Some(dur),
             ..self
         }
@@ -158,7 +158,7 @@ impl Endpoint {
     /// Default is no keepalive (`None`)
     ///
     pub fn tcp_keepalive(self, tcp_keepalive: Option<Duration>) -> Self {
-        Endpoint {
+        ChannelBuilder {
             tcp_keepalive,
             ..self
         }
@@ -172,7 +172,7 @@ impl Endpoint {
     /// builder.concurrency_limit(256);
     /// ```
     pub fn concurrency_limit(self, limit: usize) -> Self {
-        Endpoint {
+        ChannelBuilder {
             concurrency_limit: Some(limit),
             ..self
         }
@@ -187,7 +187,7 @@ impl Endpoint {
     /// builder.rate_limit(32, Duration::from_secs(1));
     /// ```
     pub fn rate_limit(self, limit: u64, duration: Duration) -> Self {
-        Endpoint {
+        ChannelBuilder {
             rate_limit: Some((limit, duration)),
             ..self
         }
@@ -200,7 +200,7 @@ impl Endpoint {
     ///
     /// [spec]: https://http2.github.io/http2-spec/#SETTINGS_INITIAL_WINDOW_SIZE
     pub fn initial_stream_window_size(self, sz: impl Into<Option<u32>>) -> Self {
-        Endpoint {
+        ChannelBuilder {
             init_stream_window_size: sz.into(),
             ..self
         }
@@ -210,7 +210,7 @@ impl Endpoint {
     ///
     /// Default is 65,535
     pub fn initial_connection_window_size(self, sz: impl Into<Option<u32>>) -> Self {
-        Endpoint {
+        ChannelBuilder {
             init_connection_window_size: sz.into(),
             ..self
         }
@@ -218,7 +218,7 @@ impl Endpoint {
 
     /// Set the value of `TCP_NODELAY` option for accepted connections. Enabled by default.
     pub fn tcp_nodelay(self, enabled: bool) -> Self {
-        Endpoint {
+        ChannelBuilder {
             tcp_nodelay: enabled,
             ..self
         }
@@ -226,7 +226,7 @@ impl Endpoint {
 
     /// Set http2 KEEP_ALIVE_INTERVAL. Uses `hyper`'s default otherwise.
     pub fn http2_keep_alive_interval(self, interval: Duration) -> Self {
-        Endpoint {
+        ChannelBuilder {
             http2_keep_alive_interval: Some(interval),
             ..self
         }
@@ -234,7 +234,7 @@ impl Endpoint {
 
     /// Set http2 KEEP_ALIVE_TIMEOUT. Uses `hyper`'s default otherwise.
     pub fn keep_alive_timeout(self, duration: Duration) -> Self {
-        Endpoint {
+        ChannelBuilder {
             http2_keep_alive_timeout: Some(duration),
             ..self
         }
@@ -242,7 +242,7 @@ impl Endpoint {
 
     /// Set http2 KEEP_ALIVE_WHILE_IDLE. Uses `hyper`'s default otherwise.
     pub fn keep_alive_while_idle(self, enabled: bool) -> Self {
-        Endpoint {
+        ChannelBuilder {
             http2_keep_alive_while_idle: Some(enabled),
             ..self
         }
@@ -250,7 +250,7 @@ impl Endpoint {
 
     /// Sets whether to use an adaptive flow control. Uses `hyper`'s default otherwise.
     pub fn http2_adaptive_window(self, enabled: bool) -> Self {
-        Endpoint {
+        ChannelBuilder {
             http2_adaptive_window: Some(enabled),
             ..self
         }
@@ -365,7 +365,7 @@ impl Endpoint {
     }
 }
 
-impl fmt::Debug for Endpoint {
+impl fmt::Debug for ChannelBuilder {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Endpoint").finish()
     }

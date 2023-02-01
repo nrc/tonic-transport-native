@@ -1,5 +1,5 @@
 use super::connection::Connection;
-use crate::{service, BoxError, Endpoint};
+use crate::{service, BoxError, ChannelBuilder};
 
 use std::{
     hash::Hash,
@@ -14,11 +14,11 @@ use tower::discover::Change;
 type DiscoverResult<K, S, E> = Result<Change<K, S>, E>;
 
 pub(crate) struct DynamicServiceStream<K: Hash + Eq + Clone> {
-    changes: Receiver<Change<K, Endpoint>>,
+    changes: Receiver<Change<K, ChannelBuilder>>,
 }
 
 impl<K: Hash + Eq + Clone> DynamicServiceStream<K> {
-    pub(crate) fn new(changes: Receiver<Change<K, Endpoint>>) -> Self {
+    pub(crate) fn new(changes: Receiver<Change<K, ChannelBuilder>>) -> Self {
         Self { changes }
     }
 }

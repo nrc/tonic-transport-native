@@ -1,5 +1,5 @@
 use crate::service::{grpc_timeout::GrpcTimeout, reconnect::Reconnect, AddOrigin, UserAgent};
-use crate::{BoxError, BoxFuture, Endpoint};
+use crate::{BoxError, BoxFuture, ChannelBuilder};
 
 use http::Uri;
 use hyper::client::conn::Builder;
@@ -28,7 +28,7 @@ pub(crate) struct Connection {
 }
 
 impl Connection {
-    fn new<C>(connector: C, endpoint: Endpoint, is_lazy: bool) -> Self
+    fn new<C>(connector: C, endpoint: ChannelBuilder, is_lazy: bool) -> Self
     where
         C: Service<Uri> + Send + 'static,
         C::Error: Into<BoxError> + Send,
@@ -76,7 +76,7 @@ impl Connection {
         }
     }
 
-    pub(crate) async fn connect<C>(connector: C, endpoint: Endpoint) -> Result<Self, BoxError>
+    pub(crate) async fn connect<C>(connector: C, endpoint: ChannelBuilder) -> Result<Self, BoxError>
     where
         C: Service<Uri> + Send + 'static,
         C::Error: Into<BoxError> + Send,
@@ -86,7 +86,7 @@ impl Connection {
         Self::new(connector, endpoint, false).ready_oneshot().await
     }
 
-    pub(crate) fn lazy<C>(connector: C, endpoint: Endpoint) -> Self
+    pub(crate) fn lazy<C>(connector: C, endpoint: ChannelBuilder) -> Self
     where
         C: Service<Uri> + Send + 'static,
         C::Error: Into<BoxError> + Send,
