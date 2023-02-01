@@ -69,30 +69,39 @@ pub struct ResponseFuture {
     inner: buffer::future::ResponseFuture<<Svc as Service<Request<BoxBody>>>::Future>,
 }
 
+pub trait IntoUri {
+    fn into_uri(self) -> Result<Uri>;
+}
+
+impl IntoUri for Uri {
+    fn into_uri(self) -> Result<Uri> {
+        Ok(self)
+    }
+}
+
+impl IntoUri for &'static str {
+    fn into_uri(self) -> Result<Uri> {
+        Ok(Uri::from_static(self))
+    }
+}
+
+impl IntoUri for String {
+    fn into_uri(self) -> Result<Uri> {
+        let bytes: Bytes = self.into_bytes().into();
+        bytes.into_uri()
+    }
+}
+
+impl IntoUri for Bytes {
+    fn into_uri(self) -> Result<Uri> {
+        Uri::from_maybe_shared(self).map_err(|e| Error::new_invalid_uri(e.to_string()))
+    }
+}
+
 impl Channel {
     /// Create an [`Endpoint`] builder that can create [`Channel`]s.
-    pub fn builder(uri: Uri, tls: TlsConnector) -> Result<Endpoint> {
+    pub fn builder(uri: impl IntoUri, tls: TlsConnector) -> Result<Endpoint> {
         Endpoint::new(uri, tls)
-    }
-
-    /// Create an `Endpoint` from a static string.
-    ///
-    /// ```
-    /// # use tonic::transport::Channel;
-    /// Channel::from_static("https://example.com");
-    /// ```
-    pub fn from_static(s: &'static str, tls: TlsConnector) -> Result<Endpoint> {
-        Endpoint::from_static(s, tls)
-    }
-
-    /// Create an `Endpoint` from shared bytes.
-    ///
-    /// ```
-    /// # use tonic::transport::Channel;
-    /// Channel::from_shared("https://example.com");
-    /// ```
-    pub fn from_shared(s: impl Into<Bytes>, tls: TlsConnector) -> Result<Endpoint> {
-        Endpoint::from_shared(s, tls)
     }
 
     /// Balance a list of [`Endpoint`]'s.

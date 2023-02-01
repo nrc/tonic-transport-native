@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let sync_connector = NativeConnectorBuilder::new(builder).build()?;
 
-    let channel = Channel::from_static("http://[::1]:50051", sync_connector.into())?
+    let channel = Channel::builder("http://[::1]:50051", sync_connector.into())?
         .tls_verify_domain("localhost".to_owned())
         .connect()
         .await?;

@@ -1,6 +1,6 @@
+use super::IntoUri;
 use crate::{service, tls, BoxError, Channel, Error, Result};
 
-use bytes::Bytes;
 use http::{uri::Uri, HeaderValue};
 use std::{convert::TryInto, fmt, time::Duration};
 use tokio_native_tls::TlsConnector;
@@ -32,10 +32,9 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    // TODO doesn't need to return a Result
-    pub fn new(uri: Uri, tls: TlsConnector) -> Result<Self> {
+    pub fn new(uri: impl IntoUri, tls: TlsConnector) -> Result<Self> {
         Ok(Self {
-            uri,
+            uri: uri.into_uri()?,
             tls,
             tls_verify_domain: None,
             origin: None,
@@ -54,37 +53,6 @@ impl Endpoint {
             connect_timeout: None,
             http2_adaptive_window: None,
         })
-    }
-
-    /// Convert an `Endpoint` from a static string.
-    ///
-    /// # Panics
-    ///
-    /// This function panics if the argument is an invalid URI.
-    ///
-    /// ```
-    /// # use tonic::transport::Endpoint;
-    /// Endpoint::from_static("https://example.com");
-    /// ```
-    pub fn from_static(s: &'static str, tls: TlsConnector) -> Result<Self> {
-        let uri = Uri::from_static(s);
-        Self::new(uri, tls)
-    }
-
-    /// Convert an `Endpoint` from shared bytes.
-    ///
-    /// ```
-    /// # use tonic::transport::Endpoint;
-    /// Endpoint::from_shared("https://example.com".to_string());
-    /// ```
-    pub fn from_shared(s: impl Into<Bytes>, tls: TlsConnector) -> Result<Self> {
-        let uri =
-            Uri::from_maybe_shared(s.into()).map_err(|e| Error::new_invalid_uri(e.to_string()))?;
-        Self::new(uri, tls)
-    }
-
-    pub fn from_string(s: String, tls: TlsConnector) -> Result<Self> {
-        Self::from_shared(s.into_bytes(), tls)
     }
 
     /// Set a custom user-agent header.
