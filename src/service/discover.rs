@@ -36,7 +36,8 @@ impl<K: Hash + Eq + Clone> Stream for DynamicServiceStream<K> {
                     http.set_nodelay(endpoint.tcp_nodelay);
                     http.set_keepalive(endpoint.tcp_keepalive);
                     http.enforce_http(false);
-                    let connector = service::connector(http, endpoint.tls.clone());
+                    // TODO unwrap
+                    let connector = service::connector(http, endpoint.tls_connector().unwrap());
                     let connection = Connection::lazy(connector, endpoint);
                     let change = Ok(Change::Insert(k, connection));
                     Poll::Ready(Some(change))

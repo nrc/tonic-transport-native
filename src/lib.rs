@@ -4,7 +4,7 @@ pub use crate::channel::{Channel, Endpoint};
 pub use crate::server::{NamedService, Router, Server};
 #[doc(inline)]
 pub use crate::service::grpc_timeout::TimeoutExpired;
-pub use crate::tls::{ClientTlsConfig, TlsAcceptor};
+pub use crate::tls::TlsAcceptor;
 pub use hyper::{Body, Uri};
 
 use pin_project::pin_project;

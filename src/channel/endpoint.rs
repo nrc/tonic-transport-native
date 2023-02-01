@@ -1,8 +1,9 @@
-use crate::{service, tls::TlsConnector, BoxError, Channel, ClientTlsConfig, Error, Result};
+use crate::{service, tls, BoxError, Channel, Error, Result};
 
 use bytes::Bytes;
 use http::{uri::Uri, HeaderValue};
 use std::{convert::TryInto, fmt, time::Duration};
+use tokio_native_tls::TlsConnector;
 use tower::make::MakeConnection;
 
 /// Channel builder.
@@ -12,6 +13,7 @@ use tower::make::MakeConnection;
 pub struct Endpoint {
     pub(crate) uri: Uri,
     pub(crate) tls: TlsConnector,
+    pub(crate) tls_verify_domain: Option<String>,
     pub(crate) origin: Option<Uri>,
     pub(crate) user_agent: Option<HeaderValue>,
     pub(crate) timeout: Option<Duration>,
@@ -30,10 +32,12 @@ pub struct Endpoint {
 }
 
 impl Endpoint {
-    pub fn new(uri: Uri, tls_config: ClientTlsConfig) -> Result<Self> {
+    // TODO doesn't need to return a Result
+    pub fn new(uri: Uri, tls: TlsConnector) -> Result<Self> {
         Ok(Self {
-            tls: tls_config.tls_connector(uri.clone())?,
             uri,
+            tls,
+            tls_verify_domain: None,
             origin: None,
             user_agent: None,
             concurrency_limit: None,
@@ -62,9 +66,9 @@ impl Endpoint {
     /// # use tonic::transport::Endpoint;
     /// Endpoint::from_static("https://example.com");
     /// ```
-    pub fn from_static(s: &'static str, tls_config: ClientTlsConfig) -> Result<Self> {
+    pub fn from_static(s: &'static str, tls: TlsConnector) -> Result<Self> {
         let uri = Uri::from_static(s);
-        Self::new(uri, tls_config)
+        Self::new(uri, tls)
     }
 
     /// Convert an `Endpoint` from shared bytes.
@@ -73,14 +77,14 @@ impl Endpoint {
     /// # use tonic::transport::Endpoint;
     /// Endpoint::from_shared("https://example.com".to_string());
     /// ```
-    pub fn from_shared(s: impl Into<Bytes>, tls_config: ClientTlsConfig) -> Result<Self> {
+    pub fn from_shared(s: impl Into<Bytes>, tls: TlsConnector) -> Result<Self> {
         let uri =
             Uri::from_maybe_shared(s.into()).map_err(|e| Error::new_invalid_uri(e.to_string()))?;
-        Self::new(uri, tls_config)
+        Self::new(uri, tls)
     }
 
-    pub fn from_string(s: String, tls_config: ClientTlsConfig) -> Result<Self> {
-        Self::from_shared(s.into_bytes(), tls_config)
+    pub fn from_string(s: String, tls: TlsConnector) -> Result<Self> {
+        Self::from_shared(s.into_bytes(), tls)
     }
 
     /// Set a custom user-agent header.
@@ -122,6 +126,17 @@ impl Endpoint {
     pub fn origin(self, origin: Uri) -> Self {
         Endpoint {
             origin: Some(origin),
+            ..self
+        }
+    }
+
+    /// Set a domain for TLS verification.
+    ///
+    /// The domain name is used to verify the server's TLS certificate. If no domain is specified,
+    /// then the domain from the channel's URI is used.
+    pub fn tls_verify_domain(self, tls_verify_domain: String) -> Self {
+        Endpoint {
+            tls_verify_domain: Some(tls_verify_domain),
             ..self
         }
     }
@@ -280,7 +295,7 @@ impl Endpoint {
         http.set_nodelay(self.tcp_nodelay);
         http.set_keepalive(self.tcp_keepalive);
 
-        let connector = service::connector(http, self.tls.clone());
+        let connector = service::connector(http, self.tls_connector()?);
 
         if let Some(connect_timeout) = self.connect_timeout {
             let mut connector = hyper_timeout::TimeoutConnector::new(connector);
@@ -295,20 +310,20 @@ impl Endpoint {
     ///
     /// The channel returned by this method does not attempt to connect to the endpoint until first
     /// use.
-    pub fn connect_lazy(&self) -> Channel {
+    pub fn connect_lazy(&self) -> Result<Channel> {
         let mut http = hyper::client::connect::HttpConnector::new();
         http.enforce_http(false);
         http.set_nodelay(self.tcp_nodelay);
         http.set_keepalive(self.tcp_keepalive);
 
-        let connector = service::connector(http, self.tls.clone());
+        let connector = service::connector(http, self.tls_connector()?);
 
         if let Some(connect_timeout) = self.connect_timeout {
             let mut connector = hyper_timeout::TimeoutConnector::new(connector);
             connector.set_connect_timeout(Some(connect_timeout));
-            Channel::new(connector, self.clone())
+            Ok(Channel::new(connector, self.clone()))
         } else {
-            Channel::new(connector, self.clone())
+            Ok(Channel::new(connector, self.clone()))
         }
     }
 
@@ -326,7 +341,7 @@ impl Endpoint {
         C::Future: Send + 'static,
         BoxError: From<C::Error> + Send + 'static,
     {
-        let connector = service::connector(connector, self.tls.clone());
+        let connector = service::connector(connector, self.tls_connector()?);
 
         if let Some(connect_timeout) = self.connect_timeout {
             let mut connector = hyper_timeout::TimeoutConnector::new(connector);
@@ -344,16 +359,28 @@ impl Endpoint {
     ///
     /// See the `uds` example for an example on how to use this function to build channel that
     /// uses a Unix socket transport.
-    pub fn connect_with_connector_lazy<C>(&self, connector: C) -> Channel
+    pub fn connect_with_connector_lazy<C>(&self, connector: C) -> Result<Channel>
     where
         C: MakeConnection<Uri> + Send + 'static,
         C::Connection: Unpin + Send + 'static,
         C::Future: Send + 'static,
         BoxError: From<C::Error> + Send + 'static,
     {
-        let connector = service::connector(connector, self.tls.clone());
+        let connector = service::connector(connector, self.tls_connector()?);
 
-        Channel::new(connector, self.clone())
+        Ok(Channel::new(connector, self.clone()))
+    }
+
+    pub(crate) fn tls_connector(&self) -> Result<tls::TlsConnector> {
+        let domain = match &self.tls_verify_domain {
+            None => self
+                .uri
+                .host()
+                .ok_or_else(|| Error::new_invalid_uri(self.uri.to_string()))?
+                .to_string(),
+            Some(domain) => domain.clone(),
+        };
+        Ok(tls::TlsConnector::new(self.tls.clone(), domain))
     }
 
     /// Get the endpoint uri.

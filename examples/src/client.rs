@@ -2,7 +2,7 @@ use crate::proto::hello_client::HelloClient;
 use crate::proto::HelloRequest;
 use openssl::ssl::{SslConnector, SslFiletype, SslMethod};
 use tokio_native_tls::native_tls::NativeConnectorBuilder;
-use tonic_transport::{Channel, ClientTlsConfig};
+use tonic_transport::Channel;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -14,16 +14,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let sync_connector = NativeConnectorBuilder::new(builder).build()?;
 
-    let tls = ClientTlsConfig::new(sync_connector.into()).domain_name("localhost");
-
-    let channel = Channel::from_static("http://[::1]:50051", tls)?
+    let channel = Channel::from_static("http://[::1]:50051", sync_connector.into())?
+        .tls_verify_domain("localhost".to_owned())
         .connect()
         .await?;
 
     let mut client = HelloClient::new(channel);
-
     let request = tonic::Request::new(HelloRequest { number: 42.into() });
-
     let response = client.count_hello(request).await?;
 
     println!("{}", response.into_inner().message);

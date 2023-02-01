@@ -5,7 +5,6 @@ mod endpoint;
 pub use self::endpoint::Endpoint;
 
 use crate::service::{Connection, DynamicServiceStream};
-use crate::tls::ClientTlsConfig;
 use crate::{BoxBody, BoxError, Error, Result};
 use bytes::Bytes;
 use http::{uri::Uri, Request, Response};
@@ -21,6 +20,7 @@ use tokio::{
     io::{AsyncRead, AsyncWrite},
     sync::mpsc::{channel, Sender},
 };
+use tokio_native_tls::TlsConnector;
 
 use tower::balance::p2c::Balance;
 use tower::{
@@ -71,8 +71,8 @@ pub struct ResponseFuture {
 
 impl Channel {
     /// Create an [`Endpoint`] builder that can create [`Channel`]s.
-    pub fn builder(uri: Uri, tls_config: ClientTlsConfig) -> Result<Endpoint> {
-        Endpoint::new(uri, tls_config)
+    pub fn builder(uri: Uri, tls: TlsConnector) -> Result<Endpoint> {
+        Endpoint::new(uri, tls)
     }
 
     /// Create an `Endpoint` from a static string.
@@ -81,8 +81,8 @@ impl Channel {
     /// # use tonic::transport::Channel;
     /// Channel::from_static("https://example.com");
     /// ```
-    pub fn from_static(s: &'static str, tls_config: ClientTlsConfig) -> Result<Endpoint> {
-        Endpoint::from_static(s, tls_config)
+    pub fn from_static(s: &'static str, tls: TlsConnector) -> Result<Endpoint> {
+        Endpoint::from_static(s, tls)
     }
 
     /// Create an `Endpoint` from shared bytes.
@@ -91,8 +91,8 @@ impl Channel {
     /// # use tonic::transport::Channel;
     /// Channel::from_shared("https://example.com");
     /// ```
-    pub fn from_shared(s: impl Into<Bytes>, tls_config: ClientTlsConfig) -> Result<Endpoint> {
-        Endpoint::from_shared(s, tls_config)
+    pub fn from_shared(s: impl Into<Bytes>, tls: TlsConnector) -> Result<Endpoint> {
+        Endpoint::from_shared(s, tls)
     }
 
     /// Balance a list of [`Endpoint`]'s.
