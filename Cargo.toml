@@ -19,14 +19,14 @@ http = "0.2"
 http-body = "0.4.4"
 hyper = {version = "0.14.14", features = ["full"]}
 hyper-timeout = {version = "0.4"}
-native-tls = {version = "0.2", path="../rust-native-tls", features = ["alpn"]}
+native-tls = {version = "0.2", git = "https://github.com/nrc/rust-native-tls.git", features = ["alpn"], branch = "native-builder"}
 pin-project = "1.0"
 thiserror = "1.0"
 tokio = {version = "1.0.1", features = ["net"]}
-tokio-native-tls = {version = "0.3.0", path="../tokio-tls/tokio-native-tls"}
+tokio-native-tls = {version = "0.3.0", git = "https://github.com/nrc/tokio-tls.git", branch = "deps"}
 tokio-stream = "0.1"
 tokio-util = {version = "0.7", features = ["codec"]}
-tonic = {version = "0.8", features = ["codegen", "prost"], path = "../tonic/tonic" }
+tonic = {version = "0.8", features = ["codegen", "prost"], git = "https://github.com/nrc/tonic.git", branch = "pub-status" }
 tower = {version = "0.4.7", default-features = false, features = ["balance", "buffer", "discover", "limit", "load", "make", "timeout", "util"]}
 tower-layer = "0.3"
 tower-service = "0.3"
